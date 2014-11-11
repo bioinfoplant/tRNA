@@ -1,4 +1,6 @@
 tRNA
 ====
 
-Tools to analyze tRNA gene content
+Tools to analyse tRNA gene content
+
+Perl scripts to analyse tRNA gene content.
