@@ -7,6 +7,8 @@ DOWNLOAD LINK
 https://github.com/bioinfoplant/tRNA/archive/master.zip
 
 
+-------------------------------------------------------------------------
+
 ** SYSTEM REQUIREMENTS **
 
 All scripts are written in Perl programming language so you need a perl interpreter installed on your machine.
