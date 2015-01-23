@@ -4,7 +4,7 @@ tRNA tools - Mattia Belli
 Perl scripts to analyse tRNA gene content.
 
 DOWNLOAD LINK
-https://github.com/bioinfoplant/tRNA/archive/master.zip
+https://github.com/bioinfoplant/tRNA/releases/
 
 
 -------------------------------------------------------------------------
