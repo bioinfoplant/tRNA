@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/bin/perl
 
 #########
 # Developed by Mattia Belli 2013

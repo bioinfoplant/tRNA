@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/bin/perl
 
 #########
 # Developed by Mattia Belli 2013
@@ -138,6 +138,7 @@ while (<CODONW_FILE>) {
 	$codon_tot{$name} = join ("\t",@raw);
 	my $species = $name;
 	my $gene;
+	$codon_gene{$name} = '';
 	if ($name =~ m!(.+)\s\[(.+)\]!){
 		$species = $1;
 		$gene = $2;
@@ -172,11 +173,12 @@ close CODONW_FILE;
 
 my $proc_codon;
 foreach (sort keys %codon_tot) {
-	++$proc_codon;
+
 	my $name = $_;
 	my $species = $codon_spec{$name};
 	
 	next unless exists 	$trna_stats{$species};	
+	++$proc_codon;
 	
 	my %trna_stats_data;
 	my %codon_tot_data;
@@ -317,7 +319,7 @@ foreach (sort keys %codon_tot) {
 	} elsif ($answer == 2 or $answer ==3) {
 		print OUT "$name\t$codon_gene{$name}\t$division\t$classification{$species}\n";
 		print OUT "\ttRNA count\t".join ("\t",@trna_count)."\n\tCodon count\t".join ("\t",@codon_count)."\n\ttRNA data\t".join ("\t",@trna_data)."\n";
-		print OUT "\tCodon data\t".join ("\t",@codon_data)."\trho:$spearman\t\tpv:$pvalue\n";
+		print OUT "\tCodon data\t".join ("\t",@codon_data)."\trho:$spearman\tpv:$pvalue\n";
 		print OUT "\tCodon data Wobbling\t".join ("\t",@codon_data_wobbling)."\trhow:$spearman_wobbling\tpvw:$pvalue_wobbling\n";
 		print OUT "\tCodon data superwobbling_AtoI\t".join ("\t",@codon_data_superwobbling_AtoI)."\trhow:$spearman_superwobbling_AtoI\tpvw:$pvalue_superwobbling_AtoI\n";		
 		print OUT2 "$name\t$codon_gene{$name}\t$division\t$classification{$species}\t$spearman\t$pvalue\t$spearman_wobbling\t$pvalue_wobbling\t$spearman_superwobbling_AtoI\t$pvalue_superwobbling_AtoI\n";
@@ -325,7 +327,7 @@ foreach (sort keys %codon_tot) {
 
 }
 	
-$R->stopR() if ($answer == 2);
+$R->stop() if ($answer == 2);
 
 close OUT;
 close OUT2;
@@ -360,13 +362,14 @@ sub spearman_test_R {
 		q`rm(list=ls())`,
 		qq`x<-c($x)`,
 		qq`y<-c($y)`,
-		q`cor<-spearman_test(x~y,alternative="greater", distribution=approximate(B=9999))`, #9999 Random Rho + 1 observed rho = distribution of 10000 rho values
-		q`statistic(cor)`
+		q`coeff<-cor.test(x,y, method="spearman", alternative="greater")`, #rho value
+		q`stat<-spearman_test(x~y,alternative="greater", distribution=approximate(B=9999))` #9999 Random Rho + 1 observed rho = distribution of 10000 rho values
 		);
-		
-	my $observed_r = $R->get('statistic(cor)');
-	my $pvalue = $R->get('pvalue(cor)[1]');
 
+	my $rho = $R->get('coeff$estimate[[1]]');		
+	$rho = @{$rho} if (ref($rho) eq "ARRAY");
+	my $pvalue = $R->get('pvalue(stat)[1]');
+	$pvalue = @{$pvalue} if (ref($pvalue) eq "ARRAY");
 	################################## IMPORTANT ####################################
 	# R is stopped in the main program to speed up the procedure ###
 	# $R->stopR() if ($answer == 2);
@@ -375,9 +378,8 @@ sub spearman_test_R {
 	# my $end_time   = new Benchmark;
 	# my $difference = timediff($end_time, $start_time);
 	# print "Benchmark: it took ", timestr($difference), "\n";
-	
-	return $observed_r, $pvalue;
-
+	# print "rho $rho pvalue $pvalue\n";
+	return ($rho, $pvalue);
 }
 
 sub spearman_test {
@@ -406,7 +408,7 @@ sub spearman_test {
 	}	
 	my $pvalue = $sum/($maxnumber+1);
 	# print "$observed_r, $pvalue\n";
-	return $observed_r, $pvalue;
+	return ($observed_r, $pvalue);
 }
   
 
