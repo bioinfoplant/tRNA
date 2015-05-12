@@ -13,6 +13,7 @@ my $os = $^O;
 print "Running in: $os\n";
 unless ($os =~ /(linux|cygwin)/){
 	print "You need a unix-based OS or emulation (cygwin) to run this script";
+	<>;
 	exit;
 }
 
@@ -25,8 +26,8 @@ chomp $file;
 #I/O
 
 my $out2 = 0;
-my $out5 = 1; #1 enables RGF calculation.
-my $out6 = 0; #1 enables RGF x size correction.
+my $out5 = 0;
+my $out6 = 0;
 
 open (DATA, $file) or die "Impossibile aprire $file .";
 open (OUT, ">", "$file - tRNA stats.txt") or die "Impossibile scrivere il file con le sequenze.";
@@ -386,8 +387,6 @@ while (<DATA>) {
 	$ids{$id_gi} = $name;
 	my $name_original = $name;
 	$name .= " $id"; 
-	$name =~ s/\'/ /g;
-	
 	$names{$name_original} = $name;
 	$chromosomes{$name_original} = $name if ($definition =~ m|chromosome \d+?,| and not $chromosomes{$name_original}); 
 	$chromosomes{$name_original} .= " [$id]" if ($chromosomes{$name_original}); 
@@ -413,7 +412,7 @@ while (<DATA>) {
 	}
 
 	# $group = 'Rhodophytes' if ($organism =~ m|Rhodophyta|i);
-	$group = 'Glaucophyta' if ($organism =~ m|Glaucocystophyceae|i);
+	# $group = 'Glaucophytes' if ($organism =~ m|Glaucocystophyceae|i);
 	# $group = 'Euglenids' if ($organism =~ m|Euglenozoa|i);
 	# $group = 'Cercozoans' if ($organism =~ m|Cercozoa|i);
 	# $group = 'Cercozoans' if ($organism =~ m|Cercozoa|i);
@@ -505,8 +504,26 @@ while (<DATA>) {
 	while ($accession_data =~ m!\s{5,}(tRNA\s{5,}.+(?:\s{10,}.+){1,})!g){
 		++$tRNA_total;
 		my $tRNA_annotation = $1;
+		next if ($tRNA_annotation =~ m!(pseudo|pseudogene)!i); #Skips if it is annotated as a pseudogene
+		next if ($tRNA_annotation=~ m!\/gene=".+?(fM|fMet).*?"!i); #skip trnfM, formyl-Methionine 
 		my $AA = '';
 		my $anticodon = '';
+		# if ($tRNA_annotation=~ m|\/gene="tRNA-(\w{3})"|i){	# 3-letter code skip fM, formyl-Methionine 
+			# $AA = $1; 
+			# next unless exists $AA2anticodons{$AA};	#Skips if it is not a standard AA
+			# my $index = first { (lc($tRNA[$_])) eq (lc($AA)) } 0..$#tRNA;
+			# if (defined $index) {
+				# ++$tRNA_count[$index];
+			# }
+		# } elsif ($tRNA_annotation=~ m|\/gene="tRN(\w)"|i) { # 1 letter code skip fM, formyl-Methionine  and non standard AAs
+			# $AA = $one_letter2three_letter{$1}; 
+			# my $index = first { (lc($tRNA[$_])) eq (lc($AA)) } 0..$#tRNA;
+			# if (defined $index) {
+				# ++$tRNA_count[$index];
+			# }
+		# } else {
+			# next;
+		# }
 		if ($tRNA_annotation=~ m|\/product="tRNA-(\w{3})"|i){
 			$AA = $1; 
 			next unless exists $AA2anticodons{$AA};	#Skips if it is not a standard AA
@@ -517,7 +534,6 @@ while (<DATA>) {
 		} else {
 			next;
 		}
-		next if ($tRNA_annotation =~ m!(pseudo|pseudogene)!i); #Skips if it is annotated as a pseudogene
 		++$tRNA_standard;
 		## Anticodon count ONLY STANDARD AA
 		## In this order it accounts for modification like CYTOSINE->LYSIDINE, if the annotation is present.
@@ -526,10 +542,12 @@ while (<DATA>) {
 			$anticodon = uc $1;
 			$anticodon =~ s/U/T/g;
 			$anticodon = &reverse_complement($anticodon);
-		}elsif ($tRNA_annotation=~ m!\/note="trn\w\w?[-(]([AUGCT]{3})!i) {    #NC_004766.1, NC_014062.1, also trnfM is recognized 
+		# }elsif ($tRNA_annotation=~ m!\/note="trn\w\w?[-(]([AUGCT]{3})!i) {    #NC_004766.1, NC_014062.1, also trnfM is recognized 
+		}elsif ($tRNA_annotation=~ m!\/note="trn\w[-(]([AUGCT]{3})!i) {    #NC_004766.1, NC_014062.1, trnfM is discarded?
 			$anticodon = uc $1;
 			$anticodon =~ s/U/T/g;
-		}elsif ($tRNA_annotation=~ m!\/gene="trn\w\w?[-(]([AUGCT]{3})!i) {    #NC_020319.1, also trnfM is recognized
+		# }elsif ($tRNA_annotation=~ m!\/gene="trn\w\w?[-(]([AUGCT]{3})!i) {    #NC_020319.1, also trnfM is recognized
+		}elsif ($tRNA_annotation=~ m!\/gene="trn\w[-(]([AUGCT]{3})!i) {    #NC_020319.1, trnfM is discarded
 			$anticodon = uc $1;
 			$anticodon =~ s/U/T/g;
 		}elsif ($tRNA_annotation=~ m!trna-\w{3}\s?\(([AUGCT]{3})\)!i) {    #NC_016753.1, NC_001320.1 /gene="tRNA-Lys(UUU)" or /note="trnQ; tRNA-Gln(UUG)"
@@ -553,7 +571,8 @@ while (<DATA>) {
 			++$anticodon_count{$rev_anticodon};
 			++$anticodon_total;
 			print "$AA($anticodon) codon?? ->$anticodon2AA{$rev_anticodon}($rev_anticodon)\n";
-		}elsif (defined $anticodon2AA{$anticodon} and (uc $anticodon2AA{$anticodon} eq 'MET' and uc $AA eq 'ILE')){
+		}elsif (defined $anticodon2AA{$anticodon} and (uc $anticodon2AA{$anticodon} eq 'MET' and uc $AA eq 'ILE')){		
+			$anticodon = 'TAT';	#assigns tRNA-CAU to Ile when specified in the annotation
 			++$anticodon_count{$anticodon};
 			++$anticodon_total;			
 		}else {
@@ -584,19 +603,19 @@ while (<DATA>) {
 						$tRNA_seq .= substr ($sequence, $1, 1);
 					}
 				}
-				$AA_to_find{$seq_header} = $AA if (length $tRNA_seq <= 10000 && length $tRNA_seq > 20);   #Discards sequences longer than 10000 and shorter than 20 AA
+				$AA_to_find{$seq_header} = $AA if (length $tRNA_seq <= 10000 && length $tRNA_seq > 20);   #Discards sequences longer than 10000 and shorter than 20 AAs
 			} elsif ($tRNA_annotation=~ m|tRNA\s+((?:complement\()?(\d+)\.\.(\d+)\)?)\n|){
 					$seq_header = $1;
 					my $start = $2;
 					my $end = $3;
 					#print "\nsecondo IF $start..$end\n";
 					$tRNA_seq = substr ($sequence, $start-1, $end-$start+1);
-					$AA_to_find{$seq_header} = $AA if (length $tRNA_seq<=10000 && length $tRNA_seq > 20);  #Discards sequences longer than 10000 and shorter than 20 AA
+					$AA_to_find{$seq_header} = $AA if (length $tRNA_seq<=10000 && length $tRNA_seq > 20);  #Discards sequences longer than 10000 and shorter than 20 AAs
 					# print "\n$seq_header\n$tRNA_seq";
 			}
 			
 			$tRNA_seq = uc $tRNA_seq;
-			print TRNASEQ ">$seq_header\n$tRNA_seq\n" if (length $tRNA_seq <= 10000 && length $tRNA_seq > 20); #Discards sequences longer than 10000 and shorter than 20 AA
+			print TRNASEQ ">$seq_header\n$tRNA_seq\n" if (length $tRNA_seq <= 10000 && length $tRNA_seq > 20); #Discards sequences longer than 10000 and shorter than 20 AAs
 			# print ">$seq_header\n$tRNA_seq\n";
 
 		}		
@@ -624,7 +643,7 @@ while (<DATA>) {
 			$tRNAscan = `tRNAscan-SE -O -Q -b -q /home/tRNASEQ.txt`; #Uses the covariance model specific for plastids/mitochondria genomes
 		}else {
 			print "Phase II - ** Nuclear or Unspecified Genome ** tRNAscan-SE is searching for generic tRNAs..\n";
-			$tRNAscan = `tRNAscan-SE -Q -b -q /home/tRNASEQ.txt`; #Uses the eukaryotic covariance model
+			$tRNAscan = `tRNAscan-SE -Q -b -q /home/tRNASEQ.txt`; #Uses the generic covariance model
 		}
 		
 		chdir '/home';
@@ -635,18 +654,21 @@ while (<DATA>) {
 			my $AA = $2;
 			my $anticodon = uc $3;
 			# print "$seq $AA $anticodon\n";
-			unless ((uc $AA eq 'MET') and (uc $AA_to_find{$seq} eq 'ILE')){	
+			if ((uc $AA eq 'MET') and (uc $AA_to_find{$seq} eq 'ILE')){	
 			        #Allow Lysidine exception for CAT anticodon. 
 					#C in the first position of the anticodon
                     #assumed to be post-transcriptionally modified to lysidine,
-                    #which pairs with A rather than G tRNA with a methionine
+                    #which pairs with A rather than G like does tRNA-Methionine.
                     #anticodon post-transcriptionally modified to have tRNA.
 					#E.g Arabidopsis thaliana, NC_000932.1.
-				if (uc $AA ne uc $AA_to_find{$seq}){		#Skips if the tRNA anticodon predicted by tRNAscanSE is different from the annotated one.
-					$AA_to_find{$seq} = "MISMATCH $anticodon->$AA instead of $AA_to_find{$seq}";
-					next;
-				}
+				$AA = 'ILE';
+				$anticodon = 'TAT';
 			}
+			if (uc $AA ne uc $AA_to_find{$seq}){		#Skips if the tRNA anticodon predicted by tRNAscanSE is different from the annotated one.
+				$AA_to_find{$seq} = "MISMATCH $anticodon->$AA instead of $AA_to_find{$seq}";
+				next;
+			}
+
 			delete $AA_to_find{$seq};
 			++$tRNAscan_success;
 			$anticodon =~ s/U/T/g;
