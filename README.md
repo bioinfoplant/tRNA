@@ -7,6 +7,13 @@ DOWNLOAD LINK
 https://github.com/bioinfoplant/tRNA/releases/
 
 
+BASED on:
+
+* tRNAscan-SE
+Lowe, T.M. and Eddy, S.R. (1997) Nucleic Acids Res, 25: 955-964.
+
+* CodonW 1.4.4 http://codonw.sourceforge.net/
+
 -------------------------------------------------------------------------
 
 ** SYSTEM REQUIREMENTS **
