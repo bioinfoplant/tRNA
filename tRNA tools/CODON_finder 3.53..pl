@@ -286,7 +286,7 @@ while (<DATA>) {
 		my $regex = $gene_to_analyze if $gene_to_analyze;
 		$regex =~ s/\s+?/\|/g if $gene_to_analyze;
 		
-		if (uc $gene_to_analyze eq 'ALL'){
+		if ($gene_to_analyze and (uc $gene_to_analyze eq 'ALL')){
 			++$found_gene;
 			push (@name_list, "$name [$gene_name]");
 			print gene_CDS_seq ">$name $gene_name $annotation\n$CDS_seq\n\n";
