@@ -17,10 +17,10 @@ chomp $file;
 print "Specify the Gene to analyze, if any: ";
 my $gene_to_analyze = <STDIN>;
 chomp $gene_to_analyze;
-$gene_to_analyze = undef unless $gene_to_analyze =~m/\w/;
+$gene_to_analyze = undef unless $gene_to_analyze =~m/\w+/;
 
 my $RSCU_switch = 0;
-# my $ALL_switch = 1;
+
 
 open (DATA, $file) or die "Impossibile aprire $file .";
 open (OUT, ">", "$file - CODONW TOT.txt") or die "Impossibile scrivere il file con le sequenze.";
@@ -246,6 +246,7 @@ while (<DATA>) {
 		$gene_name = $1 if ($cds =~ m|\/locus_tag="(.+)"|);
 		$gene_name = $1 if ($cds =~ m|\/protein_id="(.+)"|);
 		$gene_name = $1 if ($cds =~ m|\/gene="(.+)"|);
+		$gene_name = lcfirst $gene_name;
 	
 		if ($cds =~ m|(CDS\s+(?:complement\()?join\((.+?)\))\n|s){
 			$annotation = $1;
@@ -283,8 +284,13 @@ while (<DATA>) {
 		print all_CDS_seq ">$name $gene_name $annotation\n$CDS_seq\n\n";
 
 		my $regex = $gene_to_analyze if $gene_to_analyze;
-		$regex =~ s/\s+?/\|/g;
-		if ($gene_to_analyze and $gene_name =~ m|$regex|i){
+		$regex =~ s/\s+?/\|/g if $gene_to_analyze;
+		
+		if (uc $gene_to_analyze eq 'ALL'){
+			++$found_gene;
+			push (@name_list, "$name [$gene_name]");
+			print gene_CDS_seq ">$name $gene_name $annotation\n$CDS_seq\n\n";
+		} elsif ($gene_to_analyze and $gene_name =~ m|^($regex)$|i){
 			++$found_gene;
 			push (@name_list, "$name [$gene_name]");
 			print gene_CDS_seq ">$name $gene_name $annotation\n$CDS_seq\n\n";

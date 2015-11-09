@@ -505,7 +505,10 @@ while (<DATA>) {
 		++$tRNA_total;
 		my $tRNA_annotation = $1;
 		next if ($tRNA_annotation =~ m!(pseudo|pseudogene)!i); #Skips if it is annotated as a pseudogene
-		next if ($tRNA_annotation=~ m!\/gene=".+?(fM|fMet).*?"!i); #skip trnfM, formyl-Methionine 
+		if ($tRNA_annotation=~ m!\/gene=".+?(fM|fMet).*?"!i){
+			print "fM or fMet is being skipped.\n";
+			next;
+		}; #skip trnfM, formyl-Methionine 
 		my $AA = '';
 		my $anticodon = '';
 		# if ($tRNA_annotation=~ m|\/gene="tRNA-(\w{3})"|i){	# 3-letter code skip fM, formyl-Methionine 
@@ -526,7 +529,21 @@ while (<DATA>) {
 		# }
 		if ($tRNA_annotation=~ m|\/product="tRNA-(\w{3})"|i){
 			$AA = $1; 
-			next unless exists $AA2anticodons{$AA};	#Skips if it is not a standard AA
+			unless (exists $AA2anticodons{$AA}) {
+				print "$AA is being skipped.\n";
+				next;
+			}	#Skips if it is not a standard AA
+			my $index = first { (lc($tRNA[$_])) eq (lc($AA)) } 0..$#tRNA;
+			if (defined $index) {
+				++$tRNA_count[$index];
+			}
+		
+		} elsif ($tRNA_annotation=~ m|\/gene="trn(\w)(-\w)?"|) { # 1 letter code es. trnE when product="/product="tRNA-OTHER" as in Cyanophora paradoxa cyanelle
+			$AA = $one_letter2three_letter{$1}; 
+			unless (exists $AA2anticodons{$AA}) {
+				print "$AA is being skipped.\n";
+				next;
+			}
 			my $index = first { (lc($tRNA[$_])) eq (lc($AA)) } 0..$#tRNA;
 			if (defined $index) {
 				++$tRNA_count[$index];
@@ -535,10 +552,15 @@ while (<DATA>) {
 			next;
 		}
 		++$tRNA_standard;
-		## Anticodon count ONLY STANDARD AA
-		## In this order it accounts for modification like CYTOSINE->LYSIDINE, if the annotation is present.
+		## Anticodon ONLY for STANDARD AA
 		
-        if ($tRNA_annotation=~ m!\/codon_recognized="([AUGCT]{3})"!i) {
+		
+		## In this order it accounts for modification like CYTOSINE->LYSIDINE, if the annotation is present.
+		if ($tRNA_annotation=~ m!\/codon_recognized:\s?([AUGCT]{3})"!i) {
+			$anticodon = uc $1;
+			$anticodon =~ s/U/T/g;
+			$anticodon = &reverse_complement($anticodon);
+		}elsif ($tRNA_annotation=~ m!\/codon_recognized="([AUGCT]{3})"!i) {    #NC_004766.1, NC_014062.1, trnfM is discarded?
 			$anticodon = uc $1;
 			$anticodon =~ s/U/T/g;
 			$anticodon = &reverse_complement($anticodon);
@@ -556,7 +578,7 @@ while (<DATA>) {
 		}elsif ($tRNA_annotation=~ m!anticodon:?\s?([AUGCT]{3})!i) { #NC_001568.1  /note="anticodon tgc", /note="anticodon: tgc", /note="anticodon:tgc",  tRNA-Val (anticodon: AAC)"
 			$anticodon = uc $1;
 			$anticodon =~ s/U/T/g;
-		}elsif ($tRNA_annotation=~ m!/anticodon=.+seq:([AUGCT]{3})!i) { #NC_014874.1 e.g. /anticodon=(pos:60389..60391,aa:Leu,seq:caa), #NC_001568.1 is odd.
+		}elsif ($tRNA_annotation=~ m!/anticodon=.+(?:\n.+)?seq:([AUGCT]{3})!i) { #NC_014874.1 e.g. /anticodon=(pos:60389..60391,aa:Leu,seq:caa), #NC_001568.1 is odd.
 			$anticodon = uc $1;
 			$anticodon =~ s/U/T/g;	
 		}
@@ -570,13 +592,13 @@ while (<DATA>) {
 			my $rev_anticodon = &reverse_complement($anticodon);
 			++$anticodon_count{$rev_anticodon};
 			++$anticodon_total;
-			print "$AA($anticodon) codon?? ->$anticodon2AA{$rev_anticodon}($rev_anticodon)\n";
+			print "$AA($anticodon) codon/anticodon typo mistake ? ->$anticodon2AA{$rev_anticodon}($rev_anticodon)\n";
 		}elsif (defined $anticodon2AA{$anticodon} and (uc $anticodon2AA{$anticodon} eq 'MET' and uc $AA eq 'ILE')){		
 			$anticodon = 'TAT';	#assigns tRNA-CAU to Ile when specified in the annotation
 			++$anticodon_count{$anticodon};
 			++$anticodon_total;			
 		}else {
-			# print "$tRNA_annotation\n\nUnknown anticodon..searching..\n";
+		#	print "$tRNA_annotation\n\nUnknown anticodon..searching..\n";
 			++$unknown_anticodons;
 			my $tRNA_seq = '';
 			my $seq_position = '';
@@ -665,7 +687,7 @@ while (<DATA>) {
 				$anticodon = 'TAT';
 			}
 			if (uc $AA ne uc $AA_to_find{$seq}){		#Skips if the tRNA anticodon predicted by tRNAscanSE is different from the annotated one.
-				$AA_to_find{$seq} = "MISMATCH $anticodon->$AA instead of $AA_to_find{$seq}";
+				$AA_to_find{$seq} = "MISMATCH: tRNAscan found $anticodon->$AA instead of the annotated $AA_to_find{$seq}";
 				next;
 			}
 
@@ -682,7 +704,7 @@ while (<DATA>) {
 			print "	$_	$AA_to_find{$_}\n";
 		}			
 		
-#######Controllo, se trova meno anticodoni di quante annotazioni per tRNA ci sono allora salta in blocco la specie
+#######Controllo, se trova meno anticodoni di quante annotazioni per tRNA ci sono allora salta in blocco il record
 		unless ($anticodon_total == $tRNA_standard) {
 			
 			print "tRNAscan-SE failed to find all the missing anticodons ($tRNAscan_success\/$unknown_anticodons).. discarding data.\n";
