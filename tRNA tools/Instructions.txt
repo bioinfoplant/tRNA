@@ -39,4 +39,51 @@ To use all the features of CORR checker
 
 
 
+########################################################
+############ tRNA SCAN installation NOTES ##############
+########################################################
+
+
+1) MAKEFILE EDIT
+
+## where Perl v.5 (or greater) is installed
+PERLDIR = /bin
+
+## what you call the Perl v.5 executable on your system
+## (this could be 'perl5' or otherwise on some systems)
+PERLBIN = perl
+
+## where you want things installed
+BINDIR  = /home/tRNAscan/bin
+LIBDIR  = /home/tRNAscan/lib
+MANDIR  = /home/tRNAscan/man
+
+--------
+2) make
+
+--------
+3) NOTE: tRNAfinder uses 
+$ENV{PATH}.=':/home/tRNAscan/bin';
+$ENV{PERL5LIB}.=':/home/tRNAscan/bin';
+$ENV{MANPATH}.=':/home/tRNAscan/man';
+
+If your installation path is different edit tRNAfinder.
+Otherwise you can edit your .bashrc file adding
+
+export PATH="$PATH:/home/tRNAscan/bin"
+export PERL5LIB="$PERL5LIB:/home/tRNAscan/bin"
+export MANPATH="$MANPATH:/home/tRNAscan/man"
+
+4) make install
+
+--------
+5) make testrun
+
+--------
+6) make clean
+
+
+
+
+
 
