@@ -1,5 +1,4 @@
-tRNA tools - Mattia Belli
-
-New repository -> https://github.com/bioinfoplant/tRNAtools
+tRNA tools
+New repository https://github.com/bioinfoplant/tRNAtools
 ====
 
